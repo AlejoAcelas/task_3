@@ -1,5 +1,8 @@
-
-
+#Nombres
+# intial configuration
+rm(list = ls()) # limpia el entorno de R
+require(pacman)
+p_load(tidyverse,data.table,plyr,XML,rvest,xml2) # carga
 
 
 
@@ -8,12 +11,6 @@
 #############
 #  Punto 3  #
 #############
-
-
-# intial configuration
-rm(list = ls()) # limpia el entorno de R
-require(pacman)
-p_load(tidyverse,data.table,plyr,XML,rvest,xml2) # carga
 
 #3.1
 browseURL(url = 'https://es.wikipedia.org/wiki/Departamentos_de_Colombia',browser = getOption('browser'))
