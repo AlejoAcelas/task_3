@@ -15,12 +15,15 @@ p_load(broom, # tidy-coefficients
 #############
 #  Punto 1  #
 #############
+#1.1.1
 via = st_read("data/input/VIAS.shp")
 
 puntos = st_read("data/input/MGN_URB_TOPONIMIA.shp")
 
+#1.1.2
 c_medico = puntos %>% filter(CSIMBOL %in% c("021001", "021002", "021003"))
 
+#1.1.3
 c_poblado = import("data/input/c poblado (2017).rds") %>%  
   filter(cod_dane >= 54001, cod_dane < 55000)
 
@@ -29,6 +32,7 @@ depto = import("data/input/dp deptos (2017).rds") %>%
 
 mapmuse = import("data/input/victimas_map-muse.rds")
 
+#1.2-1.3.2
 all = list(via, puntos, c_medico, c_poblado, depto, mapmuse)
 names(all) = c("via", "puntos", "c_medico", "c_poblado", "depto", "mapmuse")
 
