@@ -42,12 +42,14 @@ lapply(all, skim)
 lapply(all, st_crs)
 lapply(all, st_bbox)
 all = lapply(all, st_transform, crs=crs0)
+
 leaflet() %>% addTiles() %>% addCircleMarkers(data = puntos)
 
 
 #############
 #  Punto 2  #
-#############
+#############}
+
 mapmuse$dist_vias = st_distance(mapmuse, via)
 mapmuse$dist_cmedico = st_distance(mapmuse, c_medico)
 mapmuse$dist_cpoblado = st_distance(mapmuse, c_poblado)
@@ -61,61 +63,49 @@ export(mapmuse, "data/output/mapmuse.rds")
 
 mapmuse = import("data/output/mapmuse.rds")
 
-# mapmuse = mapmuse %>% subset(runif(nrow(mapmuse)) < 0.1)
+# Para no demorme corriendolo voy a hacer un subset
+mapmuse = mapmuse %>% filter(runif(nrow(mapmuse)) < 0.05)
 
-mapmuse = mapmuse %>% mutate(across(!starts_with("dist"), factor))
+
+# Darme cuenta de cómo funcionaba el vector de units fue un dolor de cabeza
+# No me dejaba hacer las regresiones bien
+units_to_num = function(v) {
+  n = nrow(v)
+  return(as.numeric(v[1:n]))
+}
+mapmuse = mapmuse %>% mutate(across(!starts_with("dist")&!fallecido, factor))
+mapmuse = mapmuse %>% mutate(across(starts_with("dist"), units_to_num))
 
 
 # Corremos las tres regresiones
-ols = lm(fallecido ~ ., data=mapmuse)
-logit = glm(fallecido ~ ., data=mapmuse, family=binomial(link="logit"))
-probit = logit = glm(fallecido ~ ., data=mapmuse, family=binomial(link="probit"))
-
-mods = list('Logit' = logit , 'Probit' = probit , "OLS" = ols)
-outreg(mods)
-
-msummary(ols)
+ols = lm(fallecido ~ dist_cpoblado + dist_cmedico, data=mapmuse)
+logit = glm(fallecido  ~ dist_cpoblado + dist_cmedico, data=mapmuse, family=binomial(link="logit"))
+probit = logit = glm(fallecido  ~ dist_cpoblado + dist_cmedico, data=mapmuse, 
+                     family=binomial(link="probit"))
 
 logit_marg = margins(logit)
 probit_marg = margins(probit)
 
 
-
+mods = list('Logit' = logit , 'Probit' = probit , "OLS" = ols)
 modelplot(mods) + coord_flip() + 
-  labs(title = "Probability to pay with credit card" , subtitle = "Comparing models")
+  labs(title = "Probabilidad de fallecer")
+
+# Tabla conjunta (hay que hacerla con outreg eventualmente)
+msummary(mods)
 
 
-# marginal effects
 
+#outreg(mods)
+#msummary(ols)
+#glance(probit)
+
+# Tablita con el tamaño de los efectos marginales
 logit_marg %>% tidy(conf.int = TRUE)
-
 probit_marg %>% tidy(conf.int = TRUE)
 
 
-# joint models (modelsummary)
-msummary(list(ols, ols2 , ols_robust , ols_stata , ols_hac))
 
-# export table
-stargazer(ols, ols2,
-          type= 'text',
-          dep.var.labels = c('','Number of flights',''), 
-          df = FALSE,
-          digits = 3, 
-          out = paste0('data_10/output/ols.text'))
-
-# coefplot
-mods = list('Logit' = logit_marg , 'Probit' = probit_marg , "OLS" = ols_lineal)
-
-
-
-tidy(ols, conf.int = TRUE)
-glance(ols)
-
-
-
-ggplot() + geom_sf(data=boston , col="black" , aes(fill=dist_CBD)) + 
-  scale_fill_viridis(option="A" , alpha=0.9 , direction=-1 , name="Dist. CBD (miles)") +
-  geom_sf(data=boston_cbd , col = "green" , size = 5) + theme_bw()
 
 #############
 #  Punto 3  #
