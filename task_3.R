@@ -1,16 +1,13 @@
 #Nombres
 # intial configuration
-if (!require("pacman")) install.packages("pacman") # Isntalar pacman (sino está instalada)
+if (!require("pacman")) install.packages("pacman") # Isntalar pacman (sino estÃ¡ instalada)
 require(pacman) # llamar pacman
 p_load(tidyverse,viridis,sf,leaflet, rio, skimr) # llamar y/o instalar librerias
 p_load(broom, # tidy-coefficients
-       mfx, # marginal effects
        margins,  # marginal effects
-       estimatr, # robust standard errors
-       lmtest, # HAC (Newey-West) standard errors
-       fixest, # hdfe regressions (feols)
        modelsummary, # Coefplot with modelplot
-       stargazer)
+       stargazer,
+       rockchalk, htmltools)
 
 #############
 #  Punto 1  #
@@ -43,13 +40,15 @@ lapply(all, st_crs)
 lapply(all, st_bbox)
 all = lapply(all, st_transform, crs=crs0)
 
-leaflet() %>% addTiles() %>% addCircleMarkers(data = puntos)
+# leaflet() %>% addTiles() %>% addCircleMarkers(data = puntos)
 
 
 #############
 #  Punto 2  #
 #############}
 
+
+# 2.0
 mapmuse$dist_vias = st_distance(mapmuse, via)
 mapmuse$dist_cmedico = st_distance(mapmuse, c_medico)
 mapmuse$dist_cpoblado = st_distance(mapmuse, c_poblado)
@@ -59,6 +58,8 @@ mapmuse = mapmuse %>% mutate(fallecido=if_else(estado=="Muerto", 1,
 mapmuse = mapmuse %>% dplyr::select(!c("estado", "month", "geometry"))
 export(mapmuse, "data/output/mapmuse.rds")
 
+# 2.1
+
 # Importamos la base de datos ya tratada
 
 mapmuse = import("data/output/mapmuse.rds")
@@ -67,7 +68,7 @@ mapmuse = import("data/output/mapmuse.rds")
 mapmuse = mapmuse %>% filter(runif(nrow(mapmuse)) < 0.05)
 
 
-# Darme cuenta de c�mo funcionaba el vector de units fue un dolor de cabeza
+# Darme cuenta de cómo funcionaba el vector de units fue un dolor de cabeza
 # No me dejaba hacer las regresiones bien
 units_to_num = function(v) {
   n = nrow(v)
@@ -76,34 +77,50 @@ units_to_num = function(v) {
 mapmuse = mapmuse %>% mutate(across(!starts_with("dist")&!fallecido, factor))
 mapmuse = mapmuse %>% mutate(across(starts_with("dist"), units_to_num))
 
+ols = lm(fallecido ~ ., data=mapmuse)
 
-# Corremos las tres regresiones
-ols = lm(fallecido ~ dist_cpoblado + dist_cmedico, data=mapmuse)
-logit = glm(fallecido  ~ dist_cpoblado + dist_cmedico, data=mapmuse, family=binomial(link="logit"))
-probit = logit = glm(fallecido  ~ dist_cpoblado + dist_cmedico, data=mapmuse, 
+# 2.2
+
+graph1 = modelplot(ols) + labs(title = "Efecto en la probabilidad de fallecer")
+graph1
+ggsave("views/coef_plot_ols.jpeg", graph1)
+
+# 2.3
+
+logit = glm(fallecido  ~ ., data=mapmuse, family=binomial(link="logit"))
+probit = logit = glm(fallecido  ~ ., data=mapmuse, 
                      family=binomial(link="probit"))
+
+
+# 2.4
+
+mods = list('Logit' = logit , 'Probit' = probit , "OLS" = ols)
+table1 = outreg(mods, type="html")
+cat(table1, flie="views/Tabla_conjunta.html")
+
+# 2.5
 
 logit_marg = margins(logit)
 probit_marg = margins(probit)
 
+graph2 = modelplot(logit_marg, coef_map = "dist_cmedico") + 
+  labs(title = "Efecto en la probabilidad de fallecer")
+graph2
+ggsave("views/coef_plot_logit.jpeg", graph2)
 
-mods = list('Logit' = logit , 'Probit' = probit , "OLS" = ols)
-modelplot(mods) + coord_flip() + 
-  labs(title = "Probabilidad de fallecer")
-
-# Tabla conjunta (hay que hacerla con outreg eventualmente)
-msummary(mods)
-
+graph3 = modelplot(probit_marg, coef_map = "dist_cmedico") + 
+  labs(title = "Efecto en la probabilidad de fallecer")
+graph3
+ggsave("views/coef_plot_probit.jpeg", graph3)
 
 
 #outreg(mods)
 #msummary(ols)
 #glance(probit)
 
-# Tablita con el tama�o de los efectos marginales
-logit_marg %>% tidy(conf.int = TRUE)
-probit_marg %>% tidy(conf.int = TRUE)
-
+# Tablita con el tamaño de los efectos marginales
+# logit_marg %>% tidy(conf.int = TRUE)
+# probit_marg %>% tidy(conf.int = TRUE)
 
 
 
