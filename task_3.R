@@ -45,12 +45,12 @@ lapply(all, st_bbox)
 all = lapply(all, st_transform, crs=crs0)
 leaflet() %>% addTiles() %>% addCircleMarkers(data = puntos)
 
-#1.4
+#1.4.1
 mapmuse=st_transform(mapmuse,crs=4326)
 depto=st_transform(depto,crs=4326)
 mapmuse_depto=st_intersection(mapmuse, depto)
 
-#1.4.1
+#1.4.2
 
 cp_n=c_poblado%>%subset(codmpio==54820)
 ggplot() + geom_sf(data=cp_n , col = "red", fill=NA ) + geom_sf(data=via,col="gray")
