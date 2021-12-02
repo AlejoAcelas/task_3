@@ -12,6 +12,7 @@ p_load(broom, # tidy-coefficients
 #############
 #  Punto 1  #
 #############
+
 #1.1.1
 via = st_read("data/input/VIAS.shp")
 
@@ -35,12 +36,26 @@ names(all) = c("via", "puntos", "c_medico", "c_poblado", "depto", "mapmuse")
 
 crs0 = "+proj=utm +zone=19 +datum=WGS84 +units=m +no_defs"
 
-lapply(all, skim)
+####lapply(all, skim)
 lapply(all, st_crs)
 lapply(all, st_bbox)
 all = lapply(all, st_transform, crs=crs0)
+leaflet() %>% addTiles() %>% addCircleMarkers(data = puntos)
 
-# leaflet() %>% addTiles() %>% addCircleMarkers(data = puntos)
+#1.4.1
+mapmuse=st_transform(mapmuse,crs=4326)
+depto=st_transform(depto,crs=4326)
+mapmuse_depto=st_intersection(mapmuse, depto)
+
+#1.4.2
+
+cp_n=c_poblado%>%subset(codmpio==54820)
+ggplot() + geom_sf(data=cp_n , col = "red", fill=NA ) + geom_sf(data=via,col="blue")
+#linea 51 sobre vias y municipios
+st_length(st_intersection(via, cp_n))%>%sum
+
+#1.5.1
+leaflet(depto) %>% addTiles() %>% addPolygons(fillColor="yellow",fill="green",weight=2) #falta anadir los centros poblados
 
 
 #############
