@@ -1,13 +1,17 @@
 #Nombres
 # intial configuration
-if (!require("pacman")) install.packages("pacman") # Isntalar pacman (sino estÃ¡ instalada)
+rm(list=ls())
+if (!require("pacman")) install.packages("pacman") # Isntalar pacman (sino está instalada)
 require(pacman) # llamar pacman
 p_load(tidyverse,viridis,sf,leaflet, rio, skimr) # llamar y/o instalar librerias
 p_load(broom, # tidy-coefficients
+       mfx, # marginal effects
        margins,  # marginal effects
+       estimatr, # robust standard errors
+       lmtest, # HAC (Newey-West) standard errors
+       fixest, # hdfe regressions (feols)
        modelsummary, # Coefplot with modelplot
-       stargazer,
-       rockchalk, htmltools)
+       stargazer)
 
 #############
 #  Punto 1  #
@@ -35,20 +39,30 @@ names(all) = c("via", "puntos", "c_medico", "c_poblado", "depto", "mapmuse")
 
 crs0 = "+proj=utm +zone=19 +datum=WGS84 +units=m +no_defs"
 
-lapply(all, skim)
+####lapply(all, skim)
 lapply(all, st_crs)
 lapply(all, st_bbox)
 all = lapply(all, st_transform, crs=crs0)
+leaflet() %>% addTiles() %>% addCircleMarkers(data = puntos)
 
-# leaflet() %>% addTiles() %>% addCircleMarkers(data = puntos)
+#1.4.1
+mapmuse=st_transform(mapmuse,crs=4326)
+depto=st_transform(depto,crs=4326)
+mapmuse_depto=st_intersection(mapmuse, depto)
 
+#1.4.2
+
+cp_n=c_poblado%>%subset(codmpio==54820)
+ggplot() + geom_sf(data=cp_n , col = "red", fill=NA ) + geom_sf(data=via,col="blue")
+#linea 51 sobre vias y municipios
+st_length(st_intersection(via, cp_n))%>%sum
+
+#1.5.1
+leaflet(depto) %>% addTiles() %>% addPolygons(fillColor="yellow",fill="green",weight=2) #falta anadir los centros poblados
 
 #############
 #  Punto 2  #
-#############}
-
-
-# 2.0
+#############
 mapmuse$dist_vias = st_distance(mapmuse, via)
 mapmuse$dist_cmedico = st_distance(mapmuse, c_medico)
 mapmuse$dist_cpoblado = st_distance(mapmuse, c_poblado)
@@ -58,16 +72,15 @@ mapmuse = mapmuse %>% mutate(fallecido=if_else(estado=="Muerto", 1,
 mapmuse = mapmuse %>% dplyr::select(!c("estado", "month", "geometry"))
 export(mapmuse, "data/output/mapmuse.rds")
 
-# 2.1
-
 # Importamos la base de datos ya tratada
 
 mapmuse = import("data/output/mapmuse.rds")
 
-# Para no demorme corriendolo voy a hacer un subset
-mapmuse = mapmuse %>% filter(runif(nrow(mapmuse)) < 0.05)
+# mapmuse = mapmuse %>% subset(runif(nrow(mapmuse)) < 0.1)
 
+mapmuse = mapmuse %>% mutate(across(!starts_with("dist"), factor))
 
+<<<<<<< HEAD
 # Darme cuenta de cómo funcionaba el vector de units fue un dolor de cabeza
 # Creo una función para pasar de tipo units a numeros
 units_to_num = function(v) {
@@ -76,15 +89,23 @@ units_to_num = function(v) {
 }
 mapmuse = mapmuse %>% mutate(across(!starts_with("dist")&!fallecido, factor))
 mapmuse = mapmuse %>% mutate(across(starts_with("dist"), units_to_num))
+=======
+>>>>>>> 9f29884affb584cdf18e2a889e4bef12d34c57fc
 
+# Corremos las tres regresiones
 ols = lm(fallecido ~ ., data=mapmuse)
+logit = glm(fallecido ~ ., data=mapmuse, family=binomial(link="logit"))
+probit = logit = glm(fallecido ~ ., data=mapmuse, family=binomial(link="probit"))
 
-# 2.2
+mods = list('Logit' = logit , 'Probit' = probit , "OLS" = ols)
+outreg(mods)
 
-graph1 = modelplot(ols) + labs(title = "Efecto en la probabilidad de fallecer")
-graph1
-ggsave("views/coef_plot_ols.jpeg", graph1)
+msummary(ols)
 
+logit_marg = margins(logit)
+probit_marg = margins(probit)
+
+<<<<<<< HEAD
 # Esa gráfica se ve fea así que haré otra con menos cosas
 vars = c("tipo_accidente", "actividad", "genero", "dist_vias", "dist_cmedico", "dist_cpoblado")
 graph4 = modelplot(ols, coef_map=vars) + labs(title = "Efecto en la probabilidad de fallecer")
@@ -92,34 +113,48 @@ graph4
 ggsave("views/coef_plot_ols2.jpeg", graph4)
 
 # 2.3
-
-logit = glm(fallecido  ~ ., data=mapmuse, family=binomial(link="logit"))
-probit = logit = glm(fallecido  ~ ., data=mapmuse, 
-                     family=binomial(link="probit"))
+=======
+>>>>>>> 9f29884affb584cdf18e2a889e4bef12d34c57fc
 
 
-# 2.4
-
-mods = list('Logit' = logit , 'Probit' = probit , "OLS" = ols)
-table1 = outreg(mods, type="html")
-cat(table1, flie="views/Tabla_conjunta.html")
-
-# 2.5
-
-logit_marg = margins(logit)
-probit_marg = margins(probit)
-
-graph2 = modelplot(logit_marg, coef_map = "dist_cmedico") + 
-  labs(title = "Efecto en la probabilidad de fallecer")
-graph2
-ggsave("views/coef_plot_logit.jpeg", graph2)
-
-graph3 = modelplot(probit_marg, coef_map = "dist_cmedico") + 
-  labs(title = "Efecto en la probabilidad de fallecer")
-graph3
-ggsave("views/coef_plot_probit.jpeg", graph3)
+modelplot(mods) + coord_flip() + 
+  labs(title = "Probability to pay with credit card" , subtitle = "Comparing models")
 
 
+# marginal effects
+
+logit_marg %>% tidy(conf.int = TRUE)
+
+probit_marg %>% tidy(conf.int = TRUE)
+
+
+# joint models (modelsummary)
+msummary(list(ols, ols2 , ols_robust , ols_stata , ols_hac))
+
+# export table
+stargazer(ols, ols2,
+          type= 'text',
+          dep.var.labels = c('','Number of flights',''), 
+          df = FALSE,
+          digits = 3, 
+          out = paste0('data_10/output/ols.text'))
+
+# coefplot
+mods = list('Logit' = logit_marg , 'Probit' = probit_marg , "OLS" = ols_lineal)
+
+
+
+<<<<<<< HEAD
+=======
+tidy(ols, conf.int = TRUE)
+glance(ols)
+
+
+
+ggplot() + geom_sf(data=boston , col="black" , aes(fill=dist_CBD)) + 
+  scale_fill_viridis(option="A" , alpha=0.9 , direction=-1 , name="Dist. CBD (miles)") +
+  geom_sf(data=boston_cbd , col = "green" , size = 5) + theme_bw()
+>>>>>>> 9f29884affb584cdf18e2a889e4bef12d34c57fc
 
 #############
 #  Punto 3  #
