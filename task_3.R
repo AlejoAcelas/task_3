@@ -80,7 +80,7 @@ export(mapmuse, "data/output/mapmuse.rds")
 mapmuse = import("data/output/mapmuse.rds")
 
 # Para no demorme corriendolo voy a hacer un subset
-mapmuse = mapmuse %>% filter(runif(nrow(mapmuse)) < 0.05)
+# mapmuse = mapmuse %>% filter(runif(nrow(mapmuse)) < 0.05)
 
 
 # Darme cuenta de cómo funcionaba el vector de units fue un dolor de cabeza
@@ -89,6 +89,7 @@ units_to_num = function(v) {
   n = nrow(v)
   return(as.numeric(v[1:n]))
 }
+
 mapmuse = mapmuse %>% mutate(across(!starts_with("dist")&!fallecido, factor))
 mapmuse = mapmuse %>% mutate(across(starts_with("dist"), units_to_num))
 
@@ -99,6 +100,14 @@ ols = lm(fallecido ~ ., data=mapmuse)
 graph1 = modelplot(ols) + labs(title = "Efecto en la probabilidad de fallecer")
 graph1
 ggsave("views/coef_plot_ols.jpeg", graph1)
+
+# Esa tabla incluye demasiado así que haré una más chiquita
+vars = ols$coefficients %>% names()
+to_exclude = grep("cod|year", vars)
+vars = vars[-to_exclude]
+graph4 = modelplot(ols, coef_map=vars) + labs(title = "Efecto en la probabilidad de fallecer")
+graph4
+ggsave("views/coef_plot_ols2.jpeg", graph4)
 
 # 2.3
 
