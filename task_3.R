@@ -69,7 +69,7 @@ mapmuse = mapmuse %>% filter(runif(nrow(mapmuse)) < 0.05)
 
 
 # Darme cuenta de cómo funcionaba el vector de units fue un dolor de cabeza
-# No me dejaba hacer las regresiones bien
+# Creo una función para pasar de tipo units a numeros
 units_to_num = function(v) {
   n = nrow(v)
   return(as.numeric(v[1:n]))
@@ -84,6 +84,12 @@ ols = lm(fallecido ~ ., data=mapmuse)
 graph1 = modelplot(ols) + labs(title = "Efecto en la probabilidad de fallecer")
 graph1
 ggsave("views/coef_plot_ols.jpeg", graph1)
+
+# Esa gráfica se ve fea así que haré otra con menos cosas
+vars = c("tipo_accidente", "actividad", "genero", "dist_vias", "dist_cmedico", "dist_cpoblado")
+graph4 = modelplot(ols, coef_map=vars) + labs(title = "Efecto en la probabilidad de fallecer")
+graph4
+ggsave("views/coef_plot_ols2.jpeg", graph4)
 
 # 2.3
 
@@ -112,15 +118,6 @@ graph3 = modelplot(probit_marg, coef_map = "dist_cmedico") +
   labs(title = "Efecto en la probabilidad de fallecer")
 graph3
 ggsave("views/coef_plot_probit.jpeg", graph3)
-
-
-#outreg(mods)
-#msummary(ols)
-#glance(probit)
-
-# Tablita con el tamaño de los efectos marginales
-# logit_marg %>% tidy(conf.int = TRUE)
-# probit_marg %>% tidy(conf.int = TRUE)
 
 
 
