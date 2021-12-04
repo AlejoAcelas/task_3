@@ -49,14 +49,15 @@ mapmuse_depto=st_intersection(mapmuse, depto)
 
 #1.4.2
 
-cp_n=c_poblado%>%subset(codmpio==54820)
+cp_n=c_poblado%>%subset(codmpio==54174)
 ggplot() + geom_sf(data=cp_n , col = "red", fill=NA ) + geom_sf(data=via,col="blue")
 #linea 51 sobre vias y municipios
 st_length(st_intersection(via, cp_n))%>%sum
 
 #1.5.1
-leaflet(depto) %>% addTiles() %>% addPolygons(fillColor="yellow",fill="green",weight=2) #falta anadir los centros poblados
-
+#poligono norte de santander
+leaflet(depto) %>% addTiles() %>% addPolygons(fillColor="yellow",fill="green",weight=2)%>% 
+  addCircleMarkers(data=c_medico , weight=0.5 , col="blue")#falta anadir los centros poblados
 
 #############
 #  Punto 2  #
