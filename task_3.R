@@ -3,14 +3,11 @@
 #Sebastian Marin
 # intial configuration
 
+rm(list=ls())
 if (!require("pacman")) install.packages("pacman") # Isntalar pacman (sino estÃ¡ instalada)
 require(pacman) # llamar pacman
 p_load(tidyverse,viridis,sf,leaflet, rio, skimr,ggsn) # llamar y/o instalar librerias
-p_load(broom, # tidy-coefficients
-       margins,  # marginal effects
-       modelsummary, # Coefplot with modelplot
-       stargazer,
-       rockchalk, htmltools)
+p_load(broom, margins, modelsummary, stargazer,rockchalk, htmltools, rvest)
 
 #############
 #  Punto 1  #
@@ -54,25 +51,32 @@ mapmuse_depto=st_intersection(mapmuse, depto)
 
 cp_n=c_poblado%>%subset(codmpio==54174)
 ggplot() + geom_sf(data=cp_n , col = "red", fill=NA ) + geom_sf(data=via,col="blue")
-st_length(st_intersection(via, cp_n))%>%sum
+st_length(st_intersection(via, cp_n)) %>% sum
 
 #1.5.1
 
-leaflet(depto) %>% addTiles() %>% addPolygons(fillColor="yellow",fill="green",weight=2)%>% 
-  addCircleMarkers(data=c_medico , weight=0.5 , col="blue")#falta anadir los centros poblados
+mapa1 = leaflet(depto) %>% addTiles() %>% addPolygons(fillColor="yellow",weight=2) %>% 
+  addCircleMarkers(data=c_medico , radius = 2 , col="blue")
+mapa1
+ 
+mapa2 = mapa1 %>% addPolygons(data=c_poblado, color="black")
+mapa2
+
 
 #1.5.2
 
-mc = ggplot() + geom_sf(data=depto , col="black", fill="slategray1" )+
+mapa3 = ggplot() + geom_sf(data=depto , col="black", fill="slategray1" )+
   geom_sf(data=c_medico , col = "green4" , size = 1)+
   geom_sf(data=c_poblado , col = "orangered" , fill=NA)+theme_bw()
 
-mc
+mapa3
 
-mc1 = mc + north(depto, location ="topright") + 
-  scalebar(data=depto , dist=5 , dist_unit="km" , transform=T , model="WGS84")
+mapa4 = mapa3 + north(depto, location ="topright") +labs(title="Mapa Norte de Santander", 
+       subtitle="Centros poblados en rojo y centros médicos en verde") + 
+        scalebar(data=depto , dist=50 , dist_unit="km" , transform=T ,model="WGS84")
 
-mc1
+mapa4
+ggsave("views/mapa_depto.pdf")
 
 #faltan etiquetas y exportar
                    
@@ -107,6 +111,9 @@ units_to_num = function(v) {
   n = nrow(v)
   return(as.numeric(v[1:n]))
 }
+
+##### Hasta que corrijamos el error
+mapmuse$geometry = NULL
 
 mapmuse = mapmuse %>% mutate(across(!starts_with("dist")&!fallecido, factor))
 mapmuse = mapmuse %>% mutate(across(starts_with("dist"), units_to_num))
